@@ -32,7 +32,7 @@ class DropoutLayer(Layer):
   """
 
   def __init__(self, input, p=0.5, name="dropout"):
-    super(InputLayer, self).__init__(input, name)
+    super(DropoutLayer, self).__init__(input, name)
     self.output = tf.nn.dropout(self.input.output, p, name=self.name)
 
 class NonlinearityLayer(Layer):
@@ -41,7 +41,7 @@ class NonlinearityLayer(Layer):
   """
 
   def __init__(self, input, fun, name="nonlinearity"):
-    super(InputLayer, self).__init__(input, name)
+    super(NonlinearityLayer, self).__init__(input, name)
     self.output = fun(self.input.output)
 
 class BiasLayer(Layer):
@@ -50,19 +50,19 @@ class BiasLayer(Layer):
   """
 
   def __init__(self, input, name="bias"):
-    super(InputLayer, self).__init__(input, name)
+    super(BiasLayer, self).__init__(input, name)
 
     last_shape = self.input.output.get_shape().as_list()
     biases = tf.Variable(tf.constant(0.1, shape=[last_shape[-1]]), name="biases")
     self.output = tf.add(self.input.output, biases, name=self.name)
 
-class DenseLayer(Layer):
+class MatrixLayer(Layer):
   """
   A layer that multiplies previous layer outputs to a nicely initialized matrix.
   """
 
-  def __init__(self, input, hidden_units, name="dense"):
-    super(InputLayer, self).__init__(input, name)
+  def __init__(self, input, hidden_units, name="matrix"):
+    super(MatrixLayer, self).__init__(input, name)
 
     last_shape = self.input.output.get_shape().as_list()
     size = 1
@@ -78,13 +78,13 @@ class DenseLayer(Layer):
     )
     self.output = tf.matmul(flat, weights, name=self.name)
 
-class Conv2dLayer(Layer):
+class Conv2dApplyLayer(Layer):
   """
   A layer applies two-dimentional convolution.
   """
 
   def __init__(self, input, filter_size, num_filters, strides=[1, 1, 1, 1], padding="SAME", name="conv2d"):
-    super(InputLayer, self).__init__(input, name)
+    super(Conv2dApplyLayer, self).__init__(input, name)
     if type(filter_size) is not tuple:
       filter_size = (filter_size, filter_size)
 
@@ -106,5 +106,14 @@ class MaxPoolingLayer(Layer):
   """
 
   def __init__(self, input, ksize, strides, padding="SAME", name="maxpool"):
-    super(InputLayer, self).__init__(input, name)
+    super(MaxPoolingLayer, self).__init__(input, name)
     self.output = tf.nn.max_pool(self.input.output, ksize, strides, padding, name=self.name)
+
+class DenseLayer(Layer):
+  """
+  A fully connected layer.
+  """
+
+  def __init__(self, input, fun, hidden_units, name="dense"):
+    super(DenseLayer, self).__init__(input, name)
+    self.output = NonlinearityLayer(BiasLayer(MatrixLayer(input, hidden_units)), fun, name="dense")
