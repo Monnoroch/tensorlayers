@@ -17,6 +17,12 @@ class Layer(object):
     self.input = input
     self.output = None
 
+  def get_dict(self, **args):
+    if self.input is None:
+      return {}
+    else:
+      return self.input.get_dict(**args)
+
 class InputLayer(Layer):
   """
   An input Layer, just proxies its input to the output.
@@ -26,6 +32,9 @@ class InputLayer(Layer):
     super(InputLayer, self).__init__(None, name)
     self.output = input
 
+  def get_dict(self, **args):
+    return {}
+
 class DropoutLayer(Layer):
   """
   A layer that zeroes some values from a previous layer.
@@ -33,7 +42,20 @@ class DropoutLayer(Layer):
 
   def __init__(self, input, p=0.5, name="dropout"):
     super(DropoutLayer, self).__init__(input, name)
-    self.output = tf.nn.dropout(self.input.output, p, name=self.name)
+    self.prob = p
+    self.prob_var = tf.placeholder("float", shape=(), name="keep_prob")
+    self.output = tf.nn.dropout(self.input.output, self.prob_var, name=self.name)
+
+  def get_dict(self, **args):
+    d = self.input.get_dict(**args)
+    if d is None:
+      d = {}
+
+    if not args.get("dropout", True):
+      d[self.prob_var] = 1.0
+    else:
+      d[self.prob_var] = self.prob
+    return d
 
 class NonlinearityLayer(Layer):
   """
